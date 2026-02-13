@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For You ❤️</title>
+
+<style>
+  :root {
+    --pink: #ff4d88;
+    --bg: #ffe6f0;
+    --card: #ffffff;
+    --shadow: 0 10px 25px rgba(0,0,0,0.12);
+  }
+
+  body{
+    margin:0;
+    padding:18px;
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+overflow-y:auto;
+overflow-x:hidden;
+    text-align:center;
+  }
+
+  .card{
+    max-width:420px;
+    margin: 14vh auto 0;
+    background: var(--card);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  h2{ margin: 8px 0 10px; }
+  p{ margin: 8px 0; }
+
+  input{
+    width:min(320px, 85vw);
+    padding:12px 12px;
+    font-size:16px;
+    border-radius:12px;
+    border:1px solid rgba(0,0,0,0.15);
+    outline:none;
+  }
+
+  button{
+    padding:12px 18px;
+    font-size:16px;
+    border:none;
+    border-radius:12px;
+    margin:10px 8px 0;
+    cursor:pointer;
+    transition: transform 0.12s ease;
+  }
+  button:active{ transform: scale(0.98); }
+
+  #yesBtn{ background: var(--pink); color:white; }
+  #noBtn{
+    background:#888; color:white;
+    position:absolute;
+    z-index: 3;
+  }
+
+  /* Popup */
+  #overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.45);
+    z-index: 50;
+  }
+  #catPopup{
+    display:none;
+    position:fixed;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    width:min(340px, 92vw);
+    background:white;
+    border-radius:16px;
+    box-shadow:0 0 25px rgba(0,0,0,0.35);
+    padding:14px;
+    z-index: 60;
+  }
+  #catPopup img{
+    width:100%;
+    border-radius:12px;
+  }
+
+  .screen{ display:none; }
+  #lockScreen{ display:block; }
+
+  /* Map */
+  #mapWrap{
+    width: min(1000px, 95vw);
+    height: min(520px, 68vh);
+    margin: 18px auto 0;
+    border-radius: 18px;
+    background: white;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    position: relative;
+  }
+
+  #mapViewport{
+    width:100%;
+    height:100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    background: #fffdf7;
+  }
+
+  #mapCanvas{
+    width: 1500px;
+    height: 950px;
+    position: relative;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255,77,136,0.10), transparent 35%),
+      radial-gradient(circle at 75% 65%, rgba(0,0,0,0.05), transparent 40%),
+      linear-gradient(0deg, rgba(0,0,0,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+    background-size: auto, auto, 40px 40px, 40px 40px;
+  }
+
+  #pathSvg{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+  }
+
+  /* Car (image) */
+  #car{
+    position:absolute;
+    width:52px;
+    height:52px;
+    transform: translate(-50%, -50%);
+    transition: left 0.85s ease, top 0.85s ease, transform 0.85s ease;
+    z-index: 5;
+    pointer-events:none;
+  }
+  #car img{
+    width:100%;
+    height:100%;
+    display:block;
+    filter: drop-shadow(0 8px 12px rgba(0,0,0,0.18));
+  }
+
+  /* Make the car feel less “static” while it moves */
+  #car.moving img{
+    animation: carWiggle 0.22s ease-in-out infinite alternate;
+  }
+  @keyframes carWiggle{
+    from { transform: translateY(0px) scale(1); }
+    to   { transform: translateY(-2px) scale(1.01); }
+  }
+
+  /* Date stamps */
+  .stamp{
+    position:absolute;
+    transform: translate(-50%, -50%);
+    padding:10px 12px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.90);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+    border: 1px solid rgba(255,77,136,0.25);
+    font-size: 14px;
+    text-align:center;
+    max-width: 190px;
+  }
+  .stamp .dot{
+    width:10px; height:10px;
+    border-radius:999px;
+    background: rgba(255,77,136,0.85);
+    margin: 0 auto 6px;
+  }
+  .stamp button{
+    margin-top:8px;
+    padding:8px 10px;
+    font-size:13px;
+    border-radius:12px;
+    background: rgba(255,77,136,0.12);
+    color: #a3003a;
+  }
+
+  /* Timeline panel */
+  #memoryPanel{
+    max-width: 1000px;
+    width: min(1000px, 95vw);
+    margin: 16px auto 0;
+    background:white;
+    border-radius:18px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+    text-align:left;
+  }
+
+  #dateTitle{
+    margin: 4px 0 10px;
+    text-align:center;
+  }
+
+  /* Horizontal image row for the whole date */
+  #dateGallery{
+    display:flex;
+    gap:12px;
+    overflow-x:auto;
+    padding: 8px 2px 12px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .photoCard{
+    min-width: min(320px, 82vw);
+    background: rgba(0,0,0,0.02);
+    border-radius: 16px;
+    padding: 10px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+    scroll-snap-align: start;
+  }
+  .photoCard img{
+    width:100%;
+    max-height: 420px;
+    object-fit: cover;
+    border-radius: 14px;
+    display:block;
+  }
+  .photoCard .cap{
+    margin-top: 8px;
+    font-size: 14px;
+  }
+
+  .row{
+    display:flex;
+    gap:12px;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin-top: 10px;
+  }
+
+  .muted{ opacity: 0.8; font-size: 13px; text-align:center; }
+
+  /* Video end */
+  #videoWrap{
+    width: min(900px, 95vw);
+    margin: 10vh auto 0;
+    border-radius: 18px;
+    overflow:hidden;
+    box-shadow: var(--shadow);
+    position: relative;
+    background:#000;
+  }
+  #timelapseVideo{
+    width:100%;
+    height:auto;
+    display:block;
+  }
+  #videoOverlayText{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    padding:14px 16px;
+    color:white;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.65), rgba(0,0,0,0));
+    text-align:left;
+    font-size: 16px;
+    line-height: 1.35;
+    white-space: pre-wrap;
+  }
+
+  /* Final album */
+  #albumGrid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:10px;
+    margin-top: 12px;
+  }
+  #albumGrid img{
+    width:100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 14px;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+  }
+  @media (max-width: 520px){
+    #albumGrid{ grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+
+<script>
+/* =========================
+   YOUR SETTINGS
+========================= */
+
+const PASSWORD = "willyoubemyvalentine?";
+
+/* KEEP YOUR TEXT EXACTLY (UNCHANGED) */
+const memories=[
+  {title:"Maheen the loveliest lands in Kuwait (25th December) 💗",img:"photos/MaheensFirstDay.jpeg"},
+  {title:"Kuwait towers (26th December) 💗",img:"photos/MaheenVisitsKuwaitTowers.jpeg"},
+  {title:"Kuwait towers (26th December) 💗",img:"photos/MaheenVisitsKuwaitTowers2.jpeg"},
+  {title:"The loveliest visits a beachhhh!! (26th December) 💗",img:"photos/Beach1.jpeg"},
+  {title:"Maheens goosebumps :DD visiting the bridge for the first time (26th December)💗",img:"photos/Bridge1.jpeg"},
+  {title:"My loves fav picture :DDD going to Burger King for the first time 💗 (28th December)",img:"photos/BurgerKing1.jpeg"},
+  {title:"MINO GOKARTING FOR THE FIRST TIMEEEEE!!!!! (29th December) 💗",img:"photos/GoKarting1.jpeg"},
+  {title:"MINO BOWLING FOR THE FIRST TIMEEEEE!!!!! (29th December) 💗",img:"photos/Bowling1.jpeg"},
+  {title:"MINO GOKARTING FOR THE FIRST TIMEEEEE!!!!! (29th December) 💗",img:"photos/GoKarting1.jpeg"},
+  {title:"MINO pushing poor kitty :(((( (29th December) 💗",img:"photos/Beach2.jpeg"},
+  {title:"HEHEHEHE BRIDGE FOR THE 2ND TIMEEEEE!!!!! (30th December) 💗",img:"photos/Bridge2.jpeg"},
+  {title:"FIRSTTSTTDTTFFGFGFV KISIIIIIIIIIIII AAAAAAAAAA!!!!! (30th December) 💗",img:"photos/FirstKisi.jpeg"},
+  {title:"GOING FOR PAINTBALL FOR THE 1st TIMEEEEE!!!!! (30th December) 💗",img:"photos/Paintball1.jpeg"},
+  {title:"MORE PAINTBALLL!!!!! (30th December) 💗",img:"photos/Paintball2.jpeg"},
+  {title:"HEHEHHE STEALING CHAIRS!!!!! (31st December) 💗",img:"photos/StealingChairs.jpeg"},
+  {title:"VISITING AVENUESSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS!!!!! (31st December) 💗",img:"photos/Avenues1.jpeg"},
+  {title:"MINO GOKARTING FOR THE FIRST TIMEEEEE!!!!! (31st December) 💗",img:"photos/Avenues2.jpeg"},
+  {title:"MINO PLAYING POOLLLLLL!!!!! (31st December) 💗",img:"photos/Pool1.jpeg"},
+  {title:"#returningKart #respect #betteringLives #goodWork!!!!! (1st January ) 💗",img:"photos/ReturningKart.jpeg"},
+  {title:"hehehhehe taking flowers and first day sitting on couch :DDD, Also the first day mino held my arm :))!!!!! (1st January ) 💗",img:"photos/BK1.jpeg"},
+  {title:"3rd time going to the bridgeeeeeeegdbdfbfb!!!!! (1st January) 💗",img:"photos/Bridge3.jpeg"},
+  {title:"MINO TRYIGNG MCDONALDS BREKKYYYYYY!!!!! (2nd January) 💗",img:"photos/McdonaldsBrekky.jpeg"},
+  {title:"First Date?? :OOOO (2nd January) 💗",img:"photos/Date1.jpeg"},
+  {title:"MAMOO WAQAS COMES TO KWWWW!!!!! (2nd January) 💗",img:"photos/Mamoo.jpeg"},
+  {title:"Hehheheheh 2nd time kartingggg !!!!! (3rd January) 💗",img:"photos/Karting3.jpeg"},
+  {title:"the loveliest!!!!! (3rd January) 💗",img:"photos/Karting4.jpeg"},
+  {title:"MINOS VISITS BOULEVARD!!!!! (3rd January) 💗",img:"photos/Boulevard1.jpeg"},
+  {title:"First Day we held hands :))))!!!!! (3rd January) 💗",img:"photos/Boulevard2.jpeg"},
+  {title:"MINO VISITS THE DESERTTTTT, PARENTS NAY BAAT PAKKKIII KIIIIIIIIIIIII!!!!! (4th January) 💗",img:"photos/Desert1.jpeg"},
+  {title:"The most gorgeous person on this planet!!!!! (4th January) 💗",img:"photos/Desert2.jpeg"},
+  {title:"Dactar Mfaz Sahib!!!!! (4th January) 💗",img:"photos/DrMfaz.jpeg"},
+  {title:"Khana thanda horha hehhehheehhe !!!!! (4th January) 💗",img:"photos/CrownPlaza.jpeg"},
+  {title:"Longest Kisi hehehehehhehe!!!!! (5th January) 💗",img:"photos/FirstKisi1.jpeg"},
+  {title:"OMGGGFHUHV GOING TO BUY OUR RINSGSSSSS!!!!! (5th January) 💗",img:"photos/Engagement1.jpeg"},
+  {title:"hehhehehehehehheh mirror selfie at American Eagleee!!!!! (5th January) 💗",img:"photos/2.jpeg"},
+  {title:"Engagement day :))))))))) im crying i love you so much maheen!!!!! (5th January) 💗",img:"photos/Eg1.jpeg"},
+  {title:"Engagement day :))))))))) im crying i love you so much maheen!!!!! (5th January) 💗",img:"photos/Eg2.jpeg"},
+  {title:"Engagement day :))))))))) im crying i love you so much maheen!!!!! (5th January) 💗",img:"photos/Eg3.jpeg"},
+  {title:"Engagement day :))))))))) im crying i love you so much maheen!!!!! (5th January) 💗",img:"photos/Eg4.jpeg"},
+  {title:"Engagement day :))))))))) im crying i love you so much maheen!!!!! (5th January) 💗",img:"photos/Eg5.jpeg"},
+  {title:"Post engagement hair stylist heheh!!!!! (6th January) 💗",img:"photos/Stylist1.jpeg"},
+  {title:"#engaged hehehehehhe!!!!! (6th January) 💗",img:"photos/Eg6.jpeg"},
+  {title:"#engageddddd!!!!! (6th January) 💗",img:"photos/Eg7.jpeg"},
+  {title:"My lovely princess :)))!!!!! (6th January) 💗",img:"photos/Princess.jpeg"},
+  {title:"hehehe visiting shaheed parkkk!!!!! (7th January) 💗",img:"photos/shaheedpark.jpeg"},
+  {title:"hehhehe beach pt 33333!!!!! (7th January) 💗",img:"photos/meow1.jpeg"},
+  {title:"Awwwww sonuuuuu!!!!! (8th January) 💗",img:"photos/Mano1.jpeg"},
+  {title:"The loveliest girlll ehhhehehehh kisi pt 5555!!!!! (8th January) 💗",img:"photos/WillYouBeMyValentine.jpeg"},
+  {title:"Awww mano gifti hehe :))!!!!! (8th January) 💗",img:"photos/gift1.jpeg"},
+  {title:"EHHEHHE babyyyyy asleep!!!!! (8th January) 💗",img:"photos/sleepymano.jpeg"},
+];
+
+/* Final album images (you can change as you like) */
+const FINAL_ALBUM_IMAGES = [
+  "album/01.jpeg",
+  "album/02.jpeg",
+  "album/03.jpeg",
+  "album/04.jpeg",
+  "album/05.jpeg",
+  "album/06.jpeg"
+];
+
+/* Edit this later with your paragraph */
+const TIMELAPSE_PARAGRAPH =
+`Mino sorry mainay tumhary message ka reply nhi kiya, mn yay bannay lga hua tha sneaky ho kr but plan fail ho gya itni dair lgiiiiiiii uffff. But maheen, I love you so much, so so much, tum literally meri life kay best moments ka part ho, and main chahta hum donon aik doosray k saath humaisha k liye khush rahain. You literally mean so much to me that i cannot explain, you have helped me through such tough situations and im truly grateful to have you, i started falling for you more and more as time went and i literally cant explain how happy i am to have you in my life, you are my other half and you will always mean so much to me, i love you so much. I wish to be the best husband and the best fiance and the best everything for you, I wish to be as respectful and gentle to you for the rest of our lives, I hope we face no problems but I aspire to stand up for you everytime anyone says anything and I wish to be your source of support and your comfort place, and i want you to know youll always be safe in my hands :))) And i will make sure to treat you in the best way possible. You deserve the world. Hum apni poori end ki life saath guzarain pyaar k saath and khushi k saath, i love you so much :)). And happy valentines day, with you my every day is a valentines day`;
+
+
+/* =========================
+   AUDIO (you provide files)
+========================= */
+let dilAudio, highAudio;
+
+function initAudioOnce(){
+  if(dilAudio && highAudio) return;
+  dilAudio = document.getElementById("dilAudio");
+  highAudio = document.getElementById("highAudio");
+  playDil();
+}
+function safePlay(audioEl){
+  if(!audioEl) return;
+  audioEl.volume = 0.65;
+  const p = audioEl.play();
+  if(p && typeof p.catch === "function") p.catch(()=>{});
+}
+function playDil(){
+  if(!dilAudio || !highAudio) return;
+  highAudio.pause(); highAudio.currentTime = 0;
+  safePlay(dilAudio);
+}
+function playHigh(){
+  if(!dilAudio || !highAudio) return;
+  dilAudio.pause(); dilAudio.currentTime = 0;
+  safePlay(highAudio);
+}
+
+/* =========================
+   POPUP
+========================= */
+function openCatPopup(text){
+  document.getElementById("catText").innerText = text;
+  document.getElementById("overlay").style.display = "block";
+  document.getElementById("catPopup").style.display = "block";
+}
+function closeCat(){
+  document.getElementById("overlay").style.display = "none";
+  document.getElementById("catPopup").style.display = "none";
+}
+
+/* =========================
+   SCREEN NAV
+========================= */
+function showScreen(id){
+  const screens = ["lockScreen","questionScreen","timelineScreen","videoScreen","finalScreen"];
+  screens.forEach(s => document.getElementById(s).style.display = "none");
+  document.getElementById(id).style.display = "block";
+}
+
+/* =========================
+   LOCK + QUESTION
+========================= */
+function checkPassword(){
+  initAudioOnce();
+  const input = document.getElementById("passwordInput").value;
+  if(input === PASSWORD){
+    showScreen("questionScreen");
+    playDil();
+  } else {
+    openCatPopup("Wrong password 😾");
+  }
+}
+
+function moveNo(){
+  const btn=document.getElementById("noBtn");
+  btn.style.left=Math.random()*(window.innerWidth-120)+"px";
+  btn.style.top=Math.random()*(window.innerHeight-80)+"px";
+  openCatPopup("EXCUSE ME?? 😾");
+}
+
+/* =========================
+   GROUP BY DATE (timestamp)
+========================= */
+function extractDate(title){
+  const m = title.match(/\(([^)]+)\)/);
+  if(!m) return "Unknown date";
+  return m[1].trim();
+}
+
+let groupedDates = [];
+let dateIndex = -1;
+
+function buildGroups(){
+  const map = new Map();
+  for(const it of memories){
+    const d = extractDate(it.title);
+    if(!map.has(d)) map.set(d, []);
+    map.get(d).push(it);
+  }
+  groupedDates = Array.from(map.entries()).map(([date, items])=>({date, items}));
+}
+
+/* =========================
+   MAP + CAR + DATE STAMPS
+========================= */
+let points = [];
+
+function buildPoints(n){
+  const base = [
+    {x:170, y:780},
+    {x:280, y:720},
+    {x:410, y:660},
+    {x:560, y:610},
+    {x:700, y:560},
+    {x:860, y:510},
+    {x:1010, y:450},
+    {x:1160, y:400},
+    {x:1300, y:330},
+    {x:1400, y:250}
+  ];
+
+  points = [];
+  const need = Math.max(n, 2);
+  for(let i=0;i<need;i++){
+    const t = i/(need-1);
+    const segT = t*(base.length-1);
+    const seg = Math.floor(segT);
+    const local = segT - seg;
+    const a = base[Math.min(seg, base.length-2)];
+    const b = base[Math.min(seg+1, base.length-1)];
+    points.push({
+      x: a.x + (b.x-a.x)*local,
+      y: a.y + (b.y-a.y)*local
+    });
+  }
+
+  const path = document.getElementById("routePath");
+  const d = points.map((p,idx)=> idx===0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`).join(" ");
+  path.setAttribute("d", d);
+}
+
+function placeDateStamps(){
+  const canvas = document.getElementById("mapCanvas");
+  Array.from(canvas.querySelectorAll(".stamp")).forEach(el=>el.remove());
+
+  groupedDates.forEach((group, idx)=>{
+    const p = points[Math.min(idx, points.length-1)];
+    const stamp = document.createElement("div");
+    stamp.className = "stamp";
+    stamp.style.left = p.x + "px";
+    stamp.style.top  = (p.y - 55) + "px";
+    stamp.innerHTML = `
+      <div class="dot"></div>
+      <div><b>${escapeHtml(group.date)}</b></div>
+      <div style="font-size:12px; opacity:0.75;">${group.items.length} pics</div>
+      <button type="button">Jump</button>
+    `;
+    stamp.querySelector("button").onclick = () => jumpToDate(idx);
+    canvas.appendChild(stamp);
+  });
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function focusMapOn(x,y){
+  const vp = document.getElementById("mapViewport");
+  const vw = vp.clientWidth;
+  const vh = vp.clientHeight;
+  vp.scrollLeft = Math.max(0, x - vw/2);
+  vp.scrollTop  = Math.max(0, y - vh/2);
+}
+
+function angleDeg(a,b){
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  return Math.atan2(dy, dx) * (180/Math.PI);
+}
+
+function moveCarToPoint(idx){
+  const car = document.getElementById("car");
+  const p = points[Math.min(idx, points.length-1)];
+
+  car.classList.add("moving");
+  car.style.left = p.x + "px";
+  car.style.top  = p.y + "px";
+
+  const prev = points[Math.max(0, Math.min(idx-1, points.length-1))];
+  const ang = angleDeg(prev, p);
+  car.style.transform = `translate(-50%, -50%) rotate(${ang}deg)`;
+
+  setTimeout(()=> car.classList.remove("moving"), 900);
+}
+
+/* =========================
+   TIMELINE FLOW (BY DATE)
+========================= */
+function enterTimeline(){
+  initAudioOnce();
+  showScreen("timelineScreen");
+  playHigh();
+
+  dateIndex = -1;
+  document.getElementById("nextBtn").innerText = "Start the timeline 💗";
+  document.getElementById("dateTitle").innerText = "I have loved every moment I’ve spent with you ❤️";
+  document.getElementById("dateGallery").innerHTML = "";
+  document.getElementById("mutedHint").innerText = "Swipe/scroll the photos for each date 💗";
+
+  moveCarToPoint(0);
+  focusMapOn(points[0].x, points[0].y);
+}
+
+function renderDate(group){
+  document.getElementById("dateTitle").innerText = group.date;
+
+  const gallery = document.getElementById("dateGallery");
+  gallery.innerHTML = "";
+
+  group.items.forEach(item=>{
+    const card = document.createElement("div");
+    card.className = "photoCard";
+    card.innerHTML = `
+      <img src="${item.img}" alt="memory">
+      <div class="cap">${escapeHtml(item.title)}</div>
+    `;
+    gallery.appendChild(card);
+  });
+}
+
+function nextDate(){
+  initAudioOnce();
+  dateIndex++;
+
+  if(dateIndex >= groupedDates.length){
+    playDil();
+    showVideoScreen();
+    return;
+  }
+
+  document.getElementById("nextBtn").innerText =
+    (dateIndex === groupedDates.length - 1) ? "One last thing 😭❤️" : "Next date 💗";
+
+  moveCarToPoint(dateIndex);
+  const p = points[Math.min(dateIndex, points.length-1)];
+  focusMapOn(p.x, p.y);
+
+  setTimeout(()=> renderDate(groupedDates[dateIndex]), 850);
+}
+
+function jumpToDate(idx){
+  if(idx < 0 || idx >= groupedDates.length) return;
+  initAudioOnce();
+  dateIndex = idx - 1;
+  nextDate();
+}
+
+/* =========================
+   VIDEO + FINAL
+========================= */
+function showVideoScreen(){
+  showScreen("videoScreen");
+  playDil();
+  document.getElementById("videoOverlayText").innerText = TIMELAPSE_PARAGRAPH;
+
+  const v = document.getElementById("timelapseVideo");
+  v.currentTime = 0;
+  const p = v.play();
+  if(p && typeof p.catch === "function") p.catch(()=>{});
+}
+
+function goFinal(){
+  showScreen("finalScreen");
+  playDil();
+}
+
+function buildAlbum(){
+  const grid = document.getElementById("albumGrid");
+  grid.innerHTML = "";
+  FINAL_ALBUM_IMAGES.forEach(src=>{
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "memory";
+    grid.appendChild(img);
+  });
+}
+
+function finalYes(){
+  document.getElementById("finalCard").innerHTML = `
+    <h2>Hehehe 😌❤️</h2>
+    <p>I love you so much.</p>
+    <p style="opacity:0.8;font-size:13px;">Happy Valentine’s, my love 💌</p>
+  `;
+}
+function finalNo(){
+  openCatPopup("Wrong answer 😾");
+}
+
+/* =========================
+   PAN SUPPORT (optional)
+========================= */
+let isPanning=false, panStart={x:0,y:0, sl:0, st:0};
+function panStartFn(e){
+  const vp = document.getElementById("mapViewport");
+  isPanning=true;
+  const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+  panStart = {x:p.clientX, y:p.clientY, sl:vp.scrollLeft, st:vp.scrollTop};
+}
+function panMoveFn(e){
+  if(!isPanning) return;
+  const vp = document.getElementById("mapViewport");
+  const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+  const dx = p.clientX - panStart.x;
+  const dy = p.clientY - panStart.y;
+  vp.scrollLeft = panStart.sl - dx;
+  vp.scrollTop = panStart.st - dy;
+}
+function panEndFn(){ isPanning=false; }
+
+/* =========================
+   ON LOAD
+========================= */
+window.onload = function(){
+  const noBtn = document.getElementById("noBtn");
+  noBtn.style.left = "55%";
+  noBtn.style.top  = "70%";
+
+  buildGroups();
+  buildPoints(groupedDates.length);
+  placeDateStamps();
+  buildAlbum();
+
+  const canvas = document.getElementById("mapCanvas");
+  canvas.addEventListener("mousedown", panStartFn);
+  window.addEventListener("mousemove", panMoveFn);
+  window.addEventListener("mouseup", panEndFn);
+
+  canvas.addEventListener("touchstart", panStartFn, {passive:true});
+  window.addEventListener("touchmove", panMoveFn, {passive:true});
+  window.addEventListener("touchend", panEndFn);
+};
+</script>
+</head>
+
+<body>
+
+<!-- Audio (UPDATED TO YOUR ACTUAL FILES) -->
+<audio id="dilAudio" src="audio/DilKayIsharay.mpeg" loop></audio>
+<audio id="highAudio" src="audio/HighOnYou.mpeg" loop></audio>
+
+<!-- Popup -->
+<div id="overlay" onclick="closeCat()"></div>
+<div id="catPopup">
+  <!-- YOUR LOCAL CAT IMAGE -->
+  <img src="assets/cat.png" alt="Angry Cat">
+  <p id="catText">EXCUSE ME?? 😾</p>
+  <button onclick="closeCat()">Okay okay 😭</button>
+</div>
+
+<!-- LOCK SCREEN -->
+<div id="lockScreen" class="screen">
+  <div class="card">
+    <h2>Enter Password 💌</h2>
+    <input type="password" id="passwordInput" placeholder="Hint: something only we know">
+    <div class="row">
+      <button id="yesBtn" onclick="initAudioOnce(); checkPassword()">Unlock 😌</button>
+    </div>
+    <p class="muted">Tip: after unlocking, tap “Yes” and start the timeline 💗</p>
+  </div>
+</div>
+
+<!-- QUESTION SCREEN -->
+<div id="questionScreen" class="screen">
+  <div class="card">
+    <h2>Will you be my Valentine? ❤️</h2>
+    <p class="muted">(Choose wisely 😌)</p>
+    <div class="row">
+      <button id="yesBtn" onclick="initAudioOnce(); playDil(); enterTimeline();">Yes ❤️</button>
+      <button id="noBtn" onclick="moveNo()">No 😾</button>
+    </div>
+  </div>
+</div>
+
+<!-- TIMELINE SCREEN -->
+<div id="timelineScreen" class="screen">
+
+  <div id="mapWrap">
+    <div id="mapViewport">
+      <div id="mapCanvas">
+
+        <!-- Path -->
+        <svg id="pathSvg" width="1500" height="950" viewBox="0 0 1500 950" xmlns="http://www.w3.org/2000/svg">
+          <path id="routePath"
+                d=""
+                fill="none"
+                stroke="rgba(255,77,136,0.55)"
+                stroke-width="10"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-dasharray="2 18"/>
+        </svg>
+
+        <!-- Car (YOUR LOCAL CAR IMAGE) -->
+        <div id="car">
+          <img src="assets/car.png" alt="car">
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="memoryPanel">
+    <h2 id="dateTitle">I have loved every moment I’ve spent with you ❤️</h2>
+
+    <div id="dateGallery"></div>
+
+    <div class="row">
+      <button id="nextBtn" style="background:var(--pink);color:white;" onclick="playHigh(); nextDate();">Start the timeline 💗</button>
+    </div>
+
+    <p class="muted" id="mutedHint">Swipe/scroll the photos for each date 💗</p>
+  </div>
+
+</div>
+
+<!-- VIDEO SCREEN -->
+<div id="videoScreen" class="screen">
+  <div id="videoWrap">
+    <div id="videoOverlayText"></div>
+    <video id="timelapseVideo" src="videos/timelapse.mp4" controls playsinline></video>
+  </div>
+  <div class="row">
+    <button id="yesBtn" onclick="goFinal()">Next 😭💗</button>
+  </div>
+</div>
+
+<!-- FINAL SCREEN -->
+<div id="finalScreen" class="screen">
+  <div class="card" id="finalCard">
+    <h2>Will you be my Valentine? ❤️</h2>
+    <p class="muted">Look at our memories 😭💗</p>
+    <div id="albumGrid"></div>
+    <div class="row">
+      <button id="yesBtn" onclick="finalYes()">Yes ❤️</button>
+      <button style="background:#888;color:white;" onclick="finalNo()">No 😾</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
