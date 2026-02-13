@@ -254,18 +254,24 @@ overflow-x:hidden;
     display:block;
   }
   #videoOverlayText{
-    position:absolute;
-    top:0;
-    left:0;
-    right:0;
-    padding:14px 16px;
-    color:white;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.65), rgba(0,0,0,0));
-    text-align:left;
-    font-size: 16px;
-    line-height: 1.35;
-    white-space: pre-wrap;
-  }
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+
+  /* NEW */
+  bottom:0;                 /* keeps it inside the video box */
+  overflow:auto;            /* allows scrolling if text is long */
+  -webkit-overflow-scrolling: touch;
+
+  padding:14px 16px;
+  color:white;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.65), rgba(0,0,0,0));
+  text-align:left;
+  font-size: 16px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
 
   /* Final album */
   #albumGrid{
@@ -804,4 +810,5 @@ window.onload = function(){
 
 </body>
 </html>
+
 
